@@ -10,7 +10,7 @@ jira_base = 'https://my-organization.atlassian.net/rest/api/2'
 jira_auth = ('my-jira-username', 'my-jira-password')
 
 gitlab_base = 'https://my-gitlab.example.com/api/v4/projects/my-project-id'
-private_token = 'my-gitlab-token'
+gitlab_private_token = 'my-gitlab-token'
 
 # mapping of jira project codes to gitlab project ids
 project_mapping = {'my-jira-project-code-1': 'my-gitlab-project-1', 'my-jira-project-code-2': 'my-gitlab-project-2'}
@@ -49,7 +49,7 @@ for jira_project, gitlab_project in project_mapping.items():
 
         # compile issue for gitlab
         data = dict()
-        data['private_token'] = private_token
+        data['private_token'] = gitlab_private_token
         data['title'] = summary
         data['created_at'] = created
         data['description'] = 'Reporter: %s\n\nAssignee: %s\n\n%s' % (reporter, assignee, description)
@@ -67,7 +67,7 @@ for jira_project, gitlab_project in project_mapping.items():
         if issue['fields']['status']['statusCategory']['name'] == 'Done':
             url = '%s/%s/issues/%s' % (gitlab_base, gitlab_project, gitlab_issue_id)
             data = dict()
-            data['private_token'] = private_token
+            data['private_token'] = gitlab_private_token
             data['state_event'] = 'close'
             response = requests.put(url, data=data)
             if response.status_code != 200:
@@ -101,7 +101,7 @@ for jira_project, gitlab_project in project_mapping.items():
 
             # compile attachment data for gitlab
             data = dict()
-            data['private_token'] = private_token
+            data['private_token'] = gitlab_private_token
 
             # compile attachment multipart file for gitlab
             files = dict()
@@ -118,7 +118,7 @@ for jira_project, gitlab_project in project_mapping.items():
 
             # compile comment for gitlab
             data = dict()
-            data['private_token'] = private_token
+            data['private_token'] = gitlab_private_token
             data['issue_id'] = gitlab_issue_id
             data['created_at'] = created
             data['body'] = markdown
@@ -139,7 +139,7 @@ for jira_project, gitlab_project in project_mapping.items():
 
             # compile comment for gitlab
             data = dict()
-            data['private_token'] = private_token
+            data['private_token'] = gitlab_private_token
             data['issue_id'] = gitlab_issue_id
             data['created_at'] = created
             data['body'] = 'Author: %s\n\n%s' % (author, body)
