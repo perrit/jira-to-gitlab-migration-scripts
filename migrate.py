@@ -6,10 +6,12 @@ import sys
 
 # === configuration ===
 
+# base url of the jira api and user authentication credentials
 jira_base = 'https://my-organization.atlassian.net/rest/api/2'
 jira_auth = ('my-jira-username', 'my-jira-password')
 
-gitlab_base = 'https://my-gitlab.example.com/api/v4/projects/my-project-id'
+# base url of the gitlab api base url and your user's private token
+gitlab_base = 'https://my-gitlab.example.com/api/v4/projects'
 gitlab_private_token = 'my-gitlab-token'
 
 # mapping of jira project codes to gitlab project ids
