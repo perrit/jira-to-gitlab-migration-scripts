@@ -4,10 +4,10 @@
 
 Right now this is just a simple Python script to retrieve all the issues from a
 Atlassian Jira project straight into GitLab using the Jira API and insert those
-issues together with their comments into a GitLab instance.
+issues together with their attachments and comments into a GitLab instance.
 
-Attachments and users are not migrated in the current version. There is also no
-attempt made to match Jira users with GitLab users.
+Users are not migrated in the current version. There is also no attempt made to
+match Jira users with GitLab users.
 
 This is meant purely as a once-off for archival purposes.
 
