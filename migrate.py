@@ -1,4 +1,6 @@
+import io
 import json
+import os
 import requests
 import sys
 
@@ -70,15 +72,61 @@ for jira_project in jira_projects:
                 sys.stderr.write('%s %s' % (url, response.text))
                 sys.exit(1)
 
-        # fetch comments from jira
+        # fetch attachments and comments from jira
         jira_issue_id = issue['id']
-        url = '%s/issue/%s?fields=comment' % (jira_base, jira_issue_id)
+        url = '%s/issue/%s?fields=attachment,comment' % (jira_base, jira_issue_id)
         response = requests.get(url, auth=jira_auth)
         if response.status_code != 200:
             sys.stderr.write('%s %s' % (url, response.text))
             sys.exit(1)
         response_data = json.loads(response.text)
+        attachments = response_data['fields']['attachment']
         comments = response_data['fields']['comment']['comments']
+
+        # retrieve attachment content from jira and upload to gitlab
+        for attachment in attachments:
+            # retrieve attachment content from jira
+            url = attachment['content']
+            response = requests.get(url, auth=jira_auth)
+            if response.status_code != 200:
+                sys.stderr.write('%s %s' % (url, response.text))
+                sys.exit(1)
+
+            # retrieve attachment metadata
+            content_type = response.headers['content-type']
+            created = attachment['created']
+            filename = os.path.basename(url)
+
+            # compile attachment data for gitlab
+            data = dict()
+            data['private_token'] = private_token
+
+            # compile attachment multipart file for gitlab
+            files = dict()
+            files['file'] = (filename, io.BytesIO(response.content), content_type)
+
+            # upload attachment to gitlab
+            url = '%s/uploads' % gitlab_base
+            response = requests.post(url, data=data, files=files)
+            if response.status_code != 201:
+                sys.stderr.write('%s %s' % (url, response.text))
+                sys.exit(1)
+            response_data = json.loads(response.text)
+            markdown = response_data['markdown']
+
+            # compile comment for gitlab
+            data = dict()
+            data['private_token'] = private_token
+            data['issue_id'] = gitlab_issue_id
+            data['created_at'] = created
+            data['body'] = markdown
+
+            # create comment in gitlab
+            url = '%s/issues/%s/notes' % (gitlab_base, gitlab_issue_id)
+            response = requests.post(url, data=data)
+            if response.status_code != 201:
+                sys.stderr.write('%s %s' % (url, response.text))
+                sys.exit(1)
 
         # add comments to gitlab
         for comment in comments:
