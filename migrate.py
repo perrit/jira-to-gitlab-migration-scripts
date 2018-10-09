@@ -16,7 +16,7 @@ private_token = 'my-gitlab-token'
 # fetch issues from jira
 issues = []
 startAt = 0
-total = 999
+total = 1
 while total > startAt:
     url = '%s/search?jql=project=%s+order+by+id+asc&startAt=%s' % (jira_base, jira_project, startAt)
     response = requests.get(url, auth=jira_auth)
