@@ -7,15 +7,17 @@ import sys
 # === configuration ===
 
 jira_base = 'https://my-organization.atlassian.net/rest/api/2'
-jira_projects = ['my-project-code-1', 'my-project-code-2']
 jira_auth = ('my-jira-username', 'my-jira-password')
 
 gitlab_base = 'https://my-gitlab.example.com/api/v4/projects/my-project-id'
 private_token = 'my-gitlab-token'
 
+# mapping of jira project codes to gitlab project ids
+project_mapping = {'my-jira-project-code-1': 'my-gitlab-project-1', 'my-jira-project-code-2': 'my-gitlab-project-2'}
+
 # === end of configuration ===
 
-for jira_project in jira_projects:
+for jira_project, gitlab_project in project_mapping.items():
     # fetch issues from jira
     issues = []
     startAt = 0
@@ -53,7 +55,7 @@ for jira_project in jira_projects:
         data['description'] = 'Reporter: %s\n\nAssignee: %s\n\n%s' % (reporter, assignee, description)
 
         # create issue in gitlab
-        url = '%s/issues' % gitlab_base
+        url = '%s/%s/issues' % (gitlab_base, gitlab_project)
         response = requests.post(url, data=data)
         if response.status_code != 201:
             sys.stderr.write('%s %s' % (url, response.text))
@@ -63,7 +65,7 @@ for jira_project in jira_projects:
 
         # update issue status in gitlab if necessary
         if issue['fields']['status']['statusCategory']['name'] == 'Done':
-            url = '%s/issues/%s' % (gitlab_base, gitlab_issue_id)
+            url = '%s/%s/issues/%s' % (gitlab_base, gitlab_project, gitlab_issue_id)
             data = dict()
             data['private_token'] = private_token
             data['state_event'] = 'close'
@@ -106,7 +108,7 @@ for jira_project in jira_projects:
             files['file'] = (filename, io.BytesIO(response.content), content_type)
 
             # upload attachment to gitlab
-            url = '%s/uploads' % gitlab_base
+            url = '%s/%s/uploads' % (gitlab_base, gitlab_project)
             response = requests.post(url, data=data, files=files)
             if response.status_code != 201:
                 sys.stderr.write('%s %s' % (url, response.text))
@@ -122,7 +124,7 @@ for jira_project in jira_projects:
             data['body'] = markdown
 
             # create comment in gitlab
-            url = '%s/issues/%s/notes' % (gitlab_base, gitlab_issue_id)
+            url = '%s/%s/issues/%s/notes' % (gitlab_base, gitlab_project, gitlab_issue_id)
             response = requests.post(url, data=data)
             if response.status_code != 201:
                 sys.stderr.write('%s %s' % (url, response.text))
@@ -143,7 +145,7 @@ for jira_project in jira_projects:
             data['body'] = 'Author: %s\n\n%s' % (author, body)
 
             # create comment in gitlab
-            url = '%s/issues/%s/notes' % (gitlab_base, gitlab_issue_id)
+            url = '%s/%s/issues/%s/notes' % (gitlab_base, gitlab_project, gitlab_issue_id)
             response = requests.post(url, data=data)
             if response.status_code != 201:
                 sys.stderr.write('%s %s' % (url, response.text))
