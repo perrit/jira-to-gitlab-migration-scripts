@@ -6,26 +6,38 @@ import sys
 
 # === configuration ===
 
-# base url of the jira api and user authentication credentials
+# base url of the jira api
 jira_base = 'https://my-organization.atlassian.net/rest/api/2'
+
+# the authentication credentials of your jira user
 jira_auth = ('my-jira-username', 'my-jira-password')
 
-# base url of the gitlab api base url and your user's private token
+# base url of the gitlab api base url
 gitlab_base = 'https://my-gitlab.example.com/api/v4/projects'
+
+# your gitlab user's private token
 gitlab_private_token = 'my-gitlab-token'
 
-# mapping of jira project codes to gitlab project ids
-project_mapping = {'my-jira-project-code-1': 'my-gitlab-project-1', 'my-jira-project-code-2': 'my-gitlab-project-2'}
+# the gitlab group id to create new projects under
+gitlab_namespace_id = 123
+
+# the visibility of new gitlab projects
+gitlab_visibility = 'private'
+
+# mapping of project codes to project names to migrate
+projects = dict()
+projects['my-project-code-1'] = 'my-project-name-1'
+projects['my-project-code-2'] = 'my-project-name-2'
 
 # === end of configuration ===
 
-for jira_project, gitlab_project in project_mapping.items():
+for project_code, project_name in projects.items():
     # fetch issues from jira
     issues = []
     startAt = 0
     total = 1
     while total > startAt:
-        url = '%s/search?jql=project=%s+order+by+id+asc&startAt=%s' % (jira_base, jira_project, startAt)
+        url = '%s/search?jql=project=%s+order+by+id+asc&startAt=%s' % (jira_base, project_code, startAt)
         response = requests.get(url, auth=jira_auth)
         if response.status_code != 200:
             sys.stderr.write('%s %s' % (url, response.text))
@@ -39,6 +51,30 @@ for jira_project, gitlab_project in project_mapping.items():
     if len(issues) != total:
         sys.stderr.write('Expected %s but retrieved %s issues.\n' % (total, len(issues)))
         sys.exit(1)
+
+    # compile project for gitlab
+    data = dict()
+    data['private_token'] = gitlab_private_token
+    data['namespace_id'] = gitlab_namespace_id
+    data['name'] = project_name
+    data['path'] = project_code
+    data['visibility'] = gitlab_visibility
+    data['container_registry_enabled'] = 'false'
+    data['issues_enabled'] = 'true'
+    data['jobs_enabled'] = 'false'
+    data['merge_requests_enabled'] = 'false'
+    data['shared_runners_enabled'] = 'false'
+    data['snippets_enabled'] = 'false'
+    data['wiki_enabled'] = 'false'
+
+    # create project in gitlab and retrieve project id
+    url = gitlab_base
+    response = requests.post(url, data=data)
+    if response.status_code != 201:
+        sys.stderr.write('%s %s' % (url, response.text))
+        sys.exit(1)
+    response_data = json.loads(response.text)
+    gitlab_project_id = response_data['id']
 
     # add issues to gitlab
     for issue in issues:
@@ -57,7 +93,7 @@ for jira_project, gitlab_project in project_mapping.items():
         data['description'] = 'Reporter: %s\n\nAssignee: %s\n\n%s' % (reporter, assignee, description)
 
         # create issue in gitlab
-        url = '%s/%s/issues' % (gitlab_base, gitlab_project)
+        url = '%s/%s/issues' % (gitlab_base, gitlab_project_id)
         response = requests.post(url, data=data)
         if response.status_code != 201:
             sys.stderr.write('%s %s' % (url, response.text))
@@ -67,7 +103,7 @@ for jira_project, gitlab_project in project_mapping.items():
 
         # update issue status in gitlab if necessary
         if issue['fields']['status']['statusCategory']['name'] == 'Done':
-            url = '%s/%s/issues/%s' % (gitlab_base, gitlab_project, gitlab_issue_id)
+            url = '%s/%s/issues/%s' % (gitlab_base, gitlab_project_id, gitlab_issue_id)
             data = dict()
             data['private_token'] = gitlab_private_token
             data['state_event'] = 'close'
@@ -110,7 +146,7 @@ for jira_project, gitlab_project in project_mapping.items():
             files['file'] = (filename, io.BytesIO(response.content), content_type)
 
             # upload attachment to gitlab
-            url = '%s/%s/uploads' % (gitlab_base, gitlab_project)
+            url = '%s/%s/uploads' % (gitlab_base, gitlab_project_id)
             response = requests.post(url, data=data, files=files)
             if response.status_code != 201:
                 sys.stderr.write('%s %s' % (url, response.text))
@@ -126,7 +162,7 @@ for jira_project, gitlab_project in project_mapping.items():
             data['body'] = markdown
 
             # create comment in gitlab
-            url = '%s/%s/issues/%s/notes' % (gitlab_base, gitlab_project, gitlab_issue_id)
+            url = '%s/%s/issues/%s/notes' % (gitlab_base, gitlab_project_id, gitlab_issue_id)
             response = requests.post(url, data=data)
             if response.status_code != 201:
                 sys.stderr.write('%s %s' % (url, response.text))
@@ -147,7 +183,7 @@ for jira_project, gitlab_project in project_mapping.items():
             data['body'] = 'Author: %s\n\n%s' % (author, body)
 
             # create comment in gitlab
-            url = '%s/%s/issues/%s/notes' % (gitlab_base, gitlab_project, gitlab_issue_id)
+            url = '%s/%s/issues/%s/notes' % (gitlab_base, gitlab_project_id, gitlab_issue_id)
             response = requests.post(url, data=data)
             if response.status_code != 201:
                 sys.stderr.write('%s %s' % (url, response.text))
