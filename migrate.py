@@ -128,6 +128,9 @@ for project_code, project_name in projects.items():
             # retrieve attachment content from jira
             url = attachment['content']
             response = requests.get(url, auth=jira_auth)
+            if response.status_code == 404:
+                # found dead link and skip attachment
+                continue
             if response.status_code != 200:
                 sys.stderr.write('%s %s' % (url, response.text))
                 sys.exit(1)
