@@ -12,7 +12,7 @@ jira_base = 'https://my-organization.atlassian.net/rest/api/2'
 # the authentication credentials of your jira user
 jira_auth = ('my-jira-username', 'my-jira-password')
 
-# base url of the gitlab api base url
+# base url of the gitlab api
 gitlab_base = 'https://my-gitlab.example.com/api/v4/projects'
 
 # your gitlab user's private token
