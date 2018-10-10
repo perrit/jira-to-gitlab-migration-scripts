@@ -79,6 +79,7 @@ for project_code, project_name in projects.items():
     # add issues to gitlab
     for issue in issues:
         # retrieve necessary fields from jira issue
+        key = issue['key']
         summary = issue['fields']['summary']
         created = issue['fields']['created']
         reporter = issue['fields']['reporter']['name']
@@ -88,7 +89,7 @@ for project_code, project_name in projects.items():
         # compile issue for gitlab
         data = dict()
         data['private_token'] = gitlab_private_token
-        data['title'] = summary
+        data['title'] = '%s %s' % (key, summary)
         data['created_at'] = created
         data['description'] = 'Reporter: %s\n\nAssignee: %s\n\n%s' % (reporter, assignee, description)
 
